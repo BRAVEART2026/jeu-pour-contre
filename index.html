@@ -64,7 +64,10 @@
   .wall{flex:1 1 auto;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:18px;min-height:0;}
   @media (max-width:1100px){.wall{grid-template-columns:1fr;}}
   .ecard{position:relative;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;min-height:160px;
-    transition:background .35s ease;}
+    transition:background .35s ease,opacity .35s ease,filter .35s ease;}
+  .ecard.offline{opacity:.42;filter:grayscale(.4);}
+  .ecard .veille{position:absolute;top:10px;right:12px;z-index:5;font-size:10px;font-weight:800;letter-spacing:1px;
+    text-transform:uppercase;padding:4px 9px;border-radius:30px;background:rgba(240,227,214,.18);color:var(--cream);}
   /* --- réplique écran de vote (en attente) --- */
   .ecard.wait{background:rgba(255,255,255,.04);border:1.5px solid rgba(240,227,214,.14);}
   .ecard .mhead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px 4px;}
@@ -2671,35 +2674,47 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
     var cardMap={};
     function cardParts(e){
-      var nom=esc(e.nom||'Expert'),q=esc(e.quali||'');
+      var nom=esc(e.nom||'Expert'),q=esc(e.quali||''),off=e.offline?' offline':'';
+      var veille=e.offline?'<span class="veille">En veille</span>':'';
       if(e.vote==='pour'||e.vote==='contre'){
         var pour=e.vote==='pour';
-        return {cls:'ecard voted '+(pour?'pour':'contre'),
-          inner:'<div class="mvq">'+esc(QUESTION||'Pour ou contre ?')+'</div>'
+        return {cls:'ecard voted '+(pour?'pour':'contre')+off,
+          inner:veille
+               +'<div class="mvq">'+esc(QUESTION||'Pour ou contre ?')+'</div>'
                +'<div class="mvname">'+nom+'</div>'
                +'<div class="mvqual">'+q+'</div>'
                +'<div class="mvcarton"><span class="d">'+(pour?CHECK:CROSS)+'</span>'+(pour?'Pour':'Contre')+'</div>'};
       }
-      return {cls:'ecard wait',
-        inner:'<div class="mhead"><span class="mn">'+nom+'</span><span class="live"><span class="bd"></span>En attente</span></div>'
+      return {cls:'ecard wait'+off,
+        inner:veille
+             +'<div class="mhead"><span class="mn">'+nom+'</span><span class="live"><span class="bd"></span>En attente</span></div>'
              +'<div class="msub">'+q+'</div>'
              +'<div class="msplit">'
                +'<div class="mhalf pour"><span class="mi">'+CHECK+'</span><span class="ml">Pour</span></div>'
                +'<div class="mhalf contre"><span class="mi">'+CROSS+'</span><span class="ml">Contre</span></div>'
              +'</div>'};
     }
+    var offlineSince={}, GRACE=120000;
     function renderWall(state){
       var anyNew=false,present={};
       for(var k in state){state[k].forEach(function(m){
         if(m.role!=='expert'||!m.id)return;
         present[m.id]=1;
         knownExperts[m.id]={nom:m.nom,quali:m.quali};
+        if(offlineSince[m.id])delete offlineSince[m.id];          // de retour
         if(!seenIds[m.id]){seenIds[m.id]=1;anyNew=true;}
       });}
-      for(var id in knownExperts){if(!present[id]){delete knownExperts[id];delete voteMap[id];delete seenIds[id];}}
+      var now=Date.now();
+      for(var id in knownExperts){ if(!present[id]&&!offlineSince[id])offlineSince[id]=now; } // parti -> en veille (conservé)
       if(anyNew){cmd({kind:'question',text:QUESTION,round:ROUND});}
       drawWall();
     }
+    function sweepOffline(){
+      var now=Date.now(),changed=false;
+      for(var id in offlineSince){ if(now-offlineSince[id]>GRACE){delete knownExperts[id];delete voteMap[id];delete seenIds[id];delete offlineSince[id];changed=true;} }
+      if(changed)drawWall();
+    }
+    setInterval(sweepOffline,15000);
     function drawWall(){
       var ids=Object.keys(knownExperts);
       ids.sort(function(a,b){return (knownExperts[a].nom||'').localeCompare(knownExperts[b].nom||'');});
@@ -2708,10 +2723,10 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       wallEmpty.style.display='none';
       var p=0,c=0,w=0,seen={};
       ids.forEach(function(id){
-        var info=knownExperts[id],vote=voteMap[id]||null;seen[id]=1;
-        var e={nom:info.nom,quali:info.quali,vote:vote};
+        var info=knownExperts[id],vote=voteMap[id]||null,off=!!offlineSince[id];seen[id]=1;
+        var e={nom:info.nom,quali:info.quali,vote:vote,offline:off};
         if(vote==='pour')p++;else if(vote==='contre')c++;else w++;
-        var sig=(vote||'wait')+'|'+(info.nom||'')+'|'+(info.quali||'')+'|'+(QUESTION||'');
+        var sig=(vote||'wait')+'|'+(info.nom||'')+'|'+(info.quali||'')+'|'+(QUESTION||'')+'|'+(off?'off':'on');
         var parts=cardParts(e),rec=cardMap[id];
         if(!rec){var el=document.createElement('div');el.className=parts.cls;el.innerHTML=parts.inner;
           wall.appendChild(el);cardMap[id]={el:el,sig:sig};}
