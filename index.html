@@ -2646,7 +2646,8 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     var deb;
     rq.addEventListener('input',function(){clearTimeout(deb);deb=setTimeout(function(){
       QUESTION=rq.value.trim();
-      trackRegie();
+      console.log('[bisect] saisie, QUESTION=',QUESTION,' (track DÉSACTIVÉ pour test)');
+      /* trackRegie();  <-- désactivé temporairement pour isoler la cause */
     },180);});
 
     newround.addEventListener('click',function(){ROUND++;trackRegie();});
