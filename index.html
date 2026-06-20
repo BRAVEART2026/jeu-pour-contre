@@ -2607,7 +2607,6 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     channel = client.channel('pc-'+code, {config:{presence:{key:pkey}}});
     channel.on('presence',{event:'sync'},function(){ onSync && onSync(channel.presenceState()); });
-    channel.on('broadcast',{event:'cmd'},function(p){ onCmd && onCmd(p.payload||{}); });
     return channel;
   }
   function track(meta){ if(channel) try{channel.track(meta);}catch(e){} }
@@ -2643,10 +2642,9 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     rq.addEventListener('input',function(){clearTimeout(deb);deb=setTimeout(function(){
       QUESTION=rq.value.trim();
       trackRegie();
-      cmd({kind:'question',text:QUESTION});
     },180);});
 
-    newround.addEventListener('click',function(){ROUND++;trackRegie();cmd({kind:'reset',round:ROUND});});
+    newround.addEventListener('click',function(){ROUND++;trackRegie();});
 
     var cardMap={};
     function cardParts(e){
