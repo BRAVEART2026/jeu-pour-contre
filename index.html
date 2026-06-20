@@ -2604,7 +2604,9 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   function connect(code, role, onSync, onCmd){
     if(!RT) return null;
     var pkey='c'+Math.random().toString(36).slice(2,10); // unique par connexion -> pas de collision multi-onglets
-    client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {realtime:{logger:function(k,m,d){
+      if(k==='transport'||k==='channel'){ var x=d; if(d&&typeof d==='object'){ if('code'in d){x='code='+d.code+' reason='+(d.reason||'');} else if(d.message){x=d.message;} } try{console.log('[rt]',k,m,x);}catch(_){console.log('[rt]',k,m);} }
+    }}});
     channel = client.channel('pc-'+code, {config:{presence:{key:pkey}}});
     channel.on('presence',{event:'sync'},function(){ onSync && onSync(channel.presenceState()); });
     return channel;
