@@ -2603,9 +2603,8 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   var client=null, channel=null;
   function connect(code, role, onSync, onCmd){
     if(!RT) return null;
-    var pkey=(role==='regie'?'regie-':'exp-')+MYID;
     client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    channel = client.channel('pc-'+code, {config:{presence:{key:pkey},broadcast:{self:false}}});
+    channel = client.channel('pc-'+code, {config:{presence:{key:MYID}}});
     channel.on('presence',{event:'sync'},function(){ onSync && onSync(channel.presenceState()); });
     channel.on('broadcast',{event:'cmd'},function(p){ onCmd && onCmd(p.payload||{}); });
     return channel;
