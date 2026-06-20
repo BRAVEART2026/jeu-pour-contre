@@ -68,6 +68,11 @@
     border-radius:clamp(16px,1.4vw,24px);overflow:hidden;display:flex;flex-direction:column;
     container-type:inline-size;transition:background .35s ease,opacity .35s ease,filter .35s ease,transform .35s ease;}
   .ecard.offline{opacity:.42;filter:grayscale(.4);}
+  /* --- case vide : expert en attente --- */
+  .ecard.slot{background:rgba(255,255,255,.022);border:2px dashed rgba(240,227,214,.16);}
+  .ecard.slot .mface{gap:5cqw;color:rgba(240,227,214,.42);}
+  .ecard.slot .slotdot{width:7cqw;height:7cqw;border-radius:50%;background:var(--sage);opacity:.55;animation:pulse 1.4s ease-in-out infinite;}
+  .ecard.slot .slottxt{font-weight:700;font-size:4.4cqw;letter-spacing:1px;text-transform:uppercase;line-height:1.45;text-align:center;}
   .ecard .veille{position:absolute;top:3cqw;right:3.5cqw;z-index:5;font-size:3.2cqw;font-weight:800;letter-spacing:.5px;
     text-transform:uppercase;padding:1.4cqw 3cqw;border-radius:30px;background:rgba(240,227,214,.18);color:var(--cream);}
   /* --- réplique écran de vote (en attente) --- */
@@ -2733,12 +2738,21 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       if(changed)drawWall();
     }
     setInterval(sweepOffline,15000);
+    var slotEls=[];
+    function gridFor(n){
+      var slots=Math.max(4,n);
+      var cols=slots<=4?2:(slots<=9?3:4);
+      if(window.innerWidth<=1100)cols=(slots<=2?1:2);
+      var rows=Math.ceil(slots/cols);
+      return {cols:cols,rows:rows};
+    }
     function drawWall(){
       var ids=Object.keys(knownExperts);
       ids.sort(function(a,b){return (knownExperts[a].nom||'').localeCompare(knownExperts[b].nom||'');});
-      if(!ids.length){for(var x in cardMap){cardMap[x].el.remove();delete cardMap[x];}
+      slotEls.forEach(function(e){e.remove();});slotEls=[];
+      if(!ids.length&&!RT){for(var x in cardMap){cardMap[x].el.remove();delete cardMap[x];}
         wallEmpty.style.display='';if(!wall.contains(wallEmpty))wall.appendChild(wallEmpty);tally.innerHTML='';return;}
-      wallEmpty.style.display='none';
+      wallEmpty.style.display='none';if(wall.contains(wallEmpty))wallEmpty.remove();
       var p=0,c=0,w=0,seen={};
       ids.forEach(function(id){
         var info=knownExperts[id],vote=voteMap[id]||null,off=!!offlineSince[id];seen[id]=1;
@@ -2751,25 +2765,29 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
         else if(rec.sig!==sig){rec.el.className=parts.cls;rec.el.innerHTML=parts.inner;rec.sig=sig;}
       });
       for(var id2 in cardMap){if(!seen[id2]){cardMap[id2].el.remove();delete cardMap[id2];}}
+      var n=ids.length,g=gridFor(n),pad=g.cols*g.rows-n;
+      for(var i=0;i<pad;i++){
+        var s=document.createElement('div');s.className='ecard slot';
+        s.innerHTML='<div class="mface"><span class="slotdot"></span><span class="slottxt">Expert<br>en attente</span></div>';
+        wall.appendChild(s);slotEls.push(s);
+      }
       var t='';
       if(p)t+='<span class="pill p">'+CHECK_S+' '+p+' Pour</span>';
       if(c)t+='<span class="pill c">'+CROSS_S+' '+c+' Contre</span>';
       if(w)t+='<span class="pill w">'+w+' en attente</span>';
       tally.innerHTML=t;
-      layoutWall(ids.length);
+      layoutWall(g);
     }
-    function layoutWall(n){
-      if(!n)return;
-      var cols=(window.innerWidth<=1100)?1:(n===1?1:2);
-      var rows=Math.ceil(n/cols),gap=20;
-      var rect=wall.getBoundingClientRect();
-      var cw=(rect.width-gap*(cols-1))/cols;
-      var ch=(rect.height-gap*(rows-1))/rows;
-      var cardw=Math.max(120,Math.floor(Math.min(cw,ch*10/16)));
-      wall.style.gridTemplateColumns='repeat('+cols+',1fr)';
+    function layoutWall(g){
+      var gap=20,rect=wall.getBoundingClientRect();
+      var cw=(rect.width-gap*(g.cols-1))/g.cols;
+      var ch=(rect.height-gap*(g.rows-1))/g.rows;
+      var cardw=Math.max(110,Math.floor(Math.min(cw,ch*10/16)));
+      wall.style.gridTemplateColumns='repeat('+g.cols+',1fr)';
+      wall.style.gridTemplateRows='repeat('+g.rows+',1fr)';
       wall.style.setProperty('--cardw',cardw+'px');
     }
-    window.addEventListener('resize',function(){layoutWall(Object.keys(knownExperts).length);});
+    var rzT;window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(drawWall,120);});
 
     if(!RT){
       note.className='rtNote off';
@@ -2780,6 +2798,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       note.textContent='Connexion temps réel en cours…';
       buildQR();
       connect(CODE,'regie',renderWall,regieCmd);
+      drawWall();
       channel.subscribe(function(s){
         console.log('[regie] realtime status:',s);
         if(s==='SUBSCRIBED'){
