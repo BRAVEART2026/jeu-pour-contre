@@ -2601,7 +2601,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     var QUESTION='';
 
     function buildQR(){
-      var url=baseUrl()+'#s='+CODE+(QUESTION?'&q='+enc(QUESTION):'');
+      var url=baseUrl()+'#s='+CODE+((!RT&&QUESTION)?'&q='+enc(QUESTION):'');
       link.value=url;
       var qr=qrcode(0,'M');qr.addData(url);qr.make();
       var svg=qr.createSvgTag({cellSize:6,margin:2,scalable:true}).replace(/#000000/g,'#004251').replace(/black/g,'#004251');
@@ -2611,18 +2611,26 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       try{navigator.clipboard.writeText(link.value);}catch(e){document.execCommand('copy');}
       copy.textContent='Copié';setTimeout(function(){copy.textContent='Copier';},1300);});
 
+    var ROUND=1;
+    function trackRegie(){track({role:'regie',question:QUESTION,round:ROUND});}
+
     var deb;
     rq.addEventListener('input',function(){clearTimeout(deb);deb=setTimeout(function(){
       QUESTION=rq.value.trim();buildQR();
-      track({role:'regie',question:QUESTION});
+      trackRegie();
       cmd({kind:'question',text:QUESTION});
     },180);});
 
-    newround.addEventListener('click',function(){cmd({kind:'reset'});});
+    newround.addEventListener('click',function(){ROUND++;trackRegie();cmd({kind:'reset',round:ROUND});});
 
     function renderWall(state){
-      var experts=[];
-      for(var k in state){state[k].forEach(function(m){if(m.role==='expert')experts.push(m);});}
+      var byId={};
+      for(var k in state){state[k].forEach(function(m){
+        if(m.role!=='expert')return;
+        var id=m.id||k,prev=byId[id];
+        if(!prev||(!prev.vote&&m.vote))byId[id]=m;
+      });}
+      var experts=Object.keys(byId).map(function(id){return byId[id];});
       if(!experts.length){wall.innerHTML='';wall.appendChild(wallEmpty);wallEmpty.style.display='';tally.innerHTML='';return;}
       wallEmpty.style.display='none';
       var p=0,c=0,w=0;
@@ -2653,7 +2661,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     buildQR();
     if(RT){
       connect(CODE,'regie',renderWall,null);
-      channel.subscribe(function(s){if(s==='SUBSCRIBED'){track({role:'regie',question:QUESTION});}});
+      channel.subscribe(function(s){if(s==='SUBSCRIBED'){trackRegie();}});
     }else{
       qrbox.className='qrbox';
     }
@@ -2711,8 +2719,16 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     replay.addEventListener('click',reset);
 
     /* réseau */
+    var lastRound=null;
     function onSync(state){
-      for(var k in state){state[k].forEach(function(m){if(m.role==='regie'&&m.question){setQuestion(m.question);}});}
+      for(var k in state){state[k].forEach(function(m){
+        if(m.role!=='regie')return;
+        if(m.question)setQuestion(m.question);
+        if(typeof m.round!=='undefined'){
+          if(lastRound===null)lastRound=m.round;
+          else if(m.round!==lastRound){lastRound=m.round;if(setup.classList.contains('hidden'))reset();}
+        }
+      });}
     }
     function onCmd(p){
       if(p.kind==='question'){setQuestion(p.text);}
