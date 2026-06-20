@@ -161,6 +161,11 @@
   .verdict.pour ~ .replay{color:var(--petrole);}.verdict.contre ~ .replay{color:var(--cream);}
   @media (orientation:portrait){.arena{flex-direction:column;}
     .arena.decided .side:not(.chosen){transform:scale(.5) translateY(-30px);}}
+  .netchip{position:fixed;left:14px;bottom:14px;z-index:120;font-family:'Poppins',sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:1px;padding:7px 12px;border-radius:40px;transition:opacity .5s ease;pointer-events:none;}
+  .netchip.wait{background:rgba(240,227,214,.16);color:var(--cream);}
+  .netchip.ok{background:rgba(90,158,87,.25);color:#dff0d8;}
+  .netchip.err{background:var(--rust);color:#fff;}
   .setup{position:fixed;inset:0;z-index:100;background:radial-gradient(125% 125% at 50% 0%,var(--petrole) 0%,var(--ink) 100%);
     display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;}
   .setup .slogo{height:42px;margin-bottom:26px;opacity:.95;}
@@ -2598,8 +2603,9 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   var client=null, channel=null;
   function connect(code, role, onSync, onCmd){
     if(!RT) return null;
+    var pkey=(role==='regie'?'regie-':'exp-')+MYID;
     client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    channel = client.channel('pc-'+code, {config:{presence:{key:MYID}}});
+    channel = client.channel('pc-'+code, {config:{presence:{key:pkey},broadcast:{self:false}}});
     channel.on('presence',{event:'sync'},function(){ onSync && onSync(channel.presenceState()); });
     channel.on('broadcast',{event:'cmd'},function(p){ onCmd && onCmd(p.payload||{}); });
     return channel;
@@ -2635,7 +2641,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
     var deb;
     rq.addEventListener('input',function(){clearTimeout(deb);deb=setTimeout(function(){
-      QUESTION=rq.value.trim();buildQR();
+      QUESTION=rq.value.trim();
       trackRegie();
       cmd({kind:'question',text:QUESTION});
     },180);});
@@ -2691,16 +2697,25 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       tally.innerHTML=t;
     }
 
-    note.className='rtNote '+(RT?'ok':'off');
-    note.textContent = RT ? 'Réplication live active — les votes des experts s\u2019affichent ici en direct.'
-                          : 'Réplication désactivée — renseigne tes clés Supabase (2 lignes en haut du fichier). Le jeu reste jouable, mais sans le mur des experts.';
-
-    buildQR();
-    if(RT){
-      connect(CODE,'regie',renderWall,null);
-      channel.subscribe(function(s){if(s==='SUBSCRIBED'){trackRegie();}});
+    if(!RT){
+      note.className='rtNote off';
+      note.textContent='Réplication désactivée — renseigne tes clés Supabase (2 lignes en haut du fichier). Le jeu reste jouable, mais sans le mur des experts.';
+      buildQR();qrbox.className='qrbox';
     }else{
-      qrbox.className='qrbox';
+      note.className='rtNote off';
+      note.textContent='Connexion temps réel en cours…';
+      buildQR();
+      connect(CODE,'regie',renderWall,null);
+      channel.subscribe(function(s){
+        console.log('[regie] realtime status:',s);
+        if(s==='SUBSCRIBED'){trackRegie();
+          note.className='rtNote ok';
+          note.textContent='Réplication live active — les votes des experts s\u2019affichent ici en direct.';
+        }else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'||s==='CLOSED'){
+          note.className='rtNote off';
+          note.textContent='Connexion temps réel impossible ('+s+'). Vérifie dans Supabase que Realtime est activé pour le projet et que la clé anon est correcte.';
+        }
+      });
     }
   }
 
@@ -2773,10 +2788,16 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     }
 
     setQuestion(QUESTION);
+    var chip=document.createElement('div');chip.className='netchip wait';chip.textContent='\u25CF Connexion\u2026';document.body.appendChild(chip);
+    function setChip(cls,txt){chip.style.opacity='1';chip.className='netchip '+cls;chip.textContent=txt;}
     if(RT){
       connect(sessQ,'expert',onSync,onCmd);
-      channel.subscribe(function(s){if(s==='SUBSCRIBED'){var c=loadId();if(c)pushState(null);}});
-    }
+      channel.subscribe(function(s){
+        console.log('[tablette] realtime status:',s);
+        if(s==='SUBSCRIBED'){var c=loadId();if(c)pushState(null);setChip('ok','\u25CF En ligne');setTimeout(function(){chip.style.opacity='0';},2500);}
+        else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'||s==='CLOSED'){setChip('err','\u25CF Hors ligne ('+s+')');}
+      });
+    }else{setChip('err','\u25CF Temps réel non configuré');}
     if(ME){applyId(ME);showTablette();}else{openSetup();}
   }
 
