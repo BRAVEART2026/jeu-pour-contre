@@ -94,8 +94,7 @@
   .regie.broadcast .ecard .mvcarton{font-size:5.5cqmin;padding:2.8cqmin 5cqmin;}
   .regie.broadcast .ecard .mchip{font-size:3.2cqmin;padding:2.5cqmin 0;}
 
-  /* Pilule taille héro pour le tally broadcast */
-  #wallTally .pill{font-size:14px;padding:9px 18px;}
+  /* pilule régie normale (stageTop) — inchangée */
 
 
   /* mur = cluster de cartes paysage centré ; tailles posées par JS (--cardw / --cardh) */
@@ -103,9 +102,8 @@
   .ecard{position:relative;width:var(--cardw,300px);height:var(--cardh,225px);
     border-radius:clamp(16px,1.3vw,22px);overflow:hidden;display:flex;flex-direction:column;
     container-type:size;transition:background .35s ease,opacity .35s ease,filter .35s ease,transform .35s ease;}
-  .ecard.offline{opacity:.42;filter:grayscale(.4);}
-  .ecard .veille{position:absolute;top:4cqmin;right:4cqmin;z-index:5;font-size:3cqmin;font-weight:800;letter-spacing:.5px;
-    text-transform:uppercase;padding:1.4cqmin 3cqmin;border-radius:30px;background:rgba(240,227,214,.18);color:var(--cream);}
+  /* .ecard.offline supprimé — on garde toujours la carte pleine couleur */
+
 
   /* ossature commune : haut / milieu (nom) / bas */
   .ecard .mface{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
@@ -2805,22 +2803,19 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
     var cardMap={};
     function cardParts(e){
-      var nom=esc(e.nom||'Expert'),q=esc(e.quali||''),off=e.offline?' offline':'';
-      var veille=e.offline?'<span class="veille">En veille</span>':'';
+      var nom=esc(e.nom||'Expert'),q=esc(e.quali||'');
       var qual=q?'<div class="mqual">'+q+'</div>':'';
       if(e.vote==='pour'||e.vote==='contre'){
         var pour=e.vote==='pour';
-        return {cls:'ecard voted '+(pour?'pour':'contre')+off,
-          inner:veille
-               +'<div class="mface">'
+        return {cls:'ecard voted '+(pour?'pour':'contre'),
+          inner:'<div class="mface">'
                +'<div class="mtop">A voté</div>'
                +'<div class="mmid"><div class="mname">'+nom+'</div>'+qual+'</div>'
                +'<div class="mvcarton"><span class="d">'+(pour?CHECK:CROSS)+'</span>'+(pour?'Pour':'Contre')+'</div>'
                +'</div>'};
       }
-      return {cls:'ecard wait'+off,
-        inner:veille
-             +'<div class="mface">'
+      return {cls:'ecard wait',
+        inner:'<div class="mface">'
              +'<div class="mtop"><span class="dot"></span>En attente</div>'
              +'<div class="mmid"><div class="mname">'+nom+'</div>'+qual+'</div>'
              +'<div class="mchips"><span class="mchip pour">'+CHECK+'Pour</span><span class="mchip contre">'+CROSS+'Contre</span></div>'
@@ -2860,10 +2855,10 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       var p=0,c=0,w=0,seen={};
       var A1=[14,-26,32,-18,24,-30],A2=[-24,30,-15,27,-32,17];
       ids.forEach(function(id,idx){
-        var info=knownExperts[id],vote=voteMap[id]||null,off=!!offlineSince[id];seen[id]=1;
-        var e={nom:info.nom,quali:info.quali,vote:vote,offline:off};
+        var info=knownExperts[id],vote=voteMap[id]||null;seen[id]=1;
+        var e={nom:info.nom,quali:info.quali,vote:vote};
         if(vote==='pour')p++;else if(vote==='contre')c++;else w++;
-        var sig=(vote||'wait')+'|'+(info.nom||'')+'|'+(info.quali||'')+'|'+(QUESTION||'')+'|'+(off?'off':'on');
+        var sig=(vote||'wait')+'|'+(info.nom||'')+'|'+(info.quali||'')+'|'+(QUESTION||'');
         var parts=cardParts(e),rec=cardMap[id];
         function setv(el){el.style.setProperty('--sd',(idx*1.15)+'s');el.style.setProperty('--a1',A1[idx%6]+'deg');el.style.setProperty('--a2',A2[idx%6]+'deg');}
         if(!rec){var el=document.createElement('div');el.className=parts.cls;el.innerHTML=parts.inner;
@@ -2885,14 +2880,30 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       // mise à jour broadcast
       var wqText=wallQ.querySelector('.wq-text');
       if(wqText)wqText.textContent=QUESTION||'';
-      wallTally.innerHTML=t;
+      var bt='';
+      if(p){bt+='<div class="tpour"><div class="tscore">'+p+'</div><div class="tlabel">Pour</div></div>';}
+      if(p&&(c||w))bt+='<div class="tsep"></div>';
+      if(c){bt+='<div class="tcontre"><div class="tscore">'+c+'</div><div class="tlabel">Contre</div></div>';}
+      if(c&&w)bt+='<div class="tsep"></div>';
+      if(w){bt+='<div class="tattente"><div class="tscore">'+w+'</div><div class="tlabel">En attente</div></div>';}
+      wallTally.innerHTML=bt;
       layoutWall(g);
     }
     function layoutWall(g){
       var gap=20,ratio=4/3,rect=wall.getBoundingClientRect();
-      var cw=(rect.width-gap*(g.cols-1))/g.cols;
-      var ch=(rect.height-gap*(g.rows-1))/g.rows;
-      var cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
+      var isBroadcast=$('regie').classList.contains('broadcast');
+      var cw,ch,cardw;
+      if(isBroadcast){
+        // 70% de la largeur pour les cartes, 15% d'air de chaque côté
+        var usableW=rect.width*0.70;
+        cw=(usableW-gap*(g.cols-1))/g.cols;
+        ch=(rect.height-gap*(g.rows-1))/g.rows;
+        cardw=Math.max(180,Math.floor(Math.min(cw,ch*ratio)));
+      }else{
+        cw=(rect.width-gap*(g.cols-1))/g.cols;
+        ch=(rect.height-gap*(g.rows-1))/g.rows;
+        cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
+      }
       var cardh=Math.round(cardw/ratio);
       wall.style.gridTemplateColumns='repeat('+g.cols+',var(--cardw))';
       wall.style.gridAutoRows='var(--cardh)';
