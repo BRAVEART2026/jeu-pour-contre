@@ -3058,7 +3058,9 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   var CHECK_S='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M5 13l4 4L19 7"/></svg>';
   var CROSS_S='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;stroke-width:3.4;fill:none;stroke-linecap:round;stroke-linejoin:round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
-  if(sessQ){initTablette();}else{$('setup').classList.add('hidden');initRegie();}
+  if(sessQ){initTablette();}else{$('setup').classList.add('hidden');initRegie();
+    // auto-broadcast si ?broadcast=1 dans l'URL (usage vMix / NDI)
+    if(new URLSearchParams(location.search).get('broadcast')==='1')setTimeout(function(){toggleBroadcast(true);},200);}
 })();
 
 </script>
