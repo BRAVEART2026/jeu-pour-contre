@@ -97,9 +97,10 @@
   .ecard.voted.pour{background:radial-gradient(130% 130% at 50% 2%,var(--sage),var(--sage-deep));color:var(--petrole);}
   .ecard.voted.contre{background:radial-gradient(130% 130% at 50% 2%,var(--rust),var(--rust-deep));color:var(--cream);}
   .ecard.voted .mtop{opacity:.5;}
-  .ecard.voted::after{content:'';position:absolute;inset:0;z-index:4;pointer-events:none;
-    background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.22) 50%,transparent 62%);
-    transform:translateX(-130%);animation:cardShine 6.5s ease-in-out infinite;animation-delay:calc(1.4s + var(--sd,0s));}
+  .ecard.voted::after{content:'';position:absolute;width:300%;height:300%;left:-100%;top:-100%;z-index:4;pointer-events:none;
+    background:linear-gradient(90deg,transparent 45%,rgba(255,255,255,.2) 50%,transparent 55%);
+    transform:rotate(var(--a1,16deg)) translateX(-60%);
+    animation:cardShine 7.5s ease-in-out infinite;animation-delay:calc(1.2s + var(--sd,0s));}
   .ecard.voted .mname{animation:nameIn .55s .08s cubic-bezier(.2,.95,.25,1) both;}
   .ecard.voted .mqual{opacity:.62;}
   .ecard .mvcarton{display:inline-flex;align-items:center;gap:2.6cqmin;padding:3.2cqmin 6.5cqmin;border-radius:40px;
@@ -119,7 +120,13 @@
   .ecard.slot .slottxt{font-weight:700;font-size:3.6cqmin;letter-spacing:2px;text-transform:uppercase;color:rgba(240,227,214,.36);}
   @keyframes pulse{0%,100%{opacity:.35;transform:scale(.8);}50%{opacity:1;transform:scale(1.1);}}
   @keyframes cardPop{0%{transform:scale(.9);opacity:.35;}100%{transform:scale(1);opacity:1;}}
-  @keyframes cardShine{0%{transform:translateX(-130%);}16%{transform:translateX(130%);}100%{transform:translateX(130%);}}
+  @keyframes cardShine{
+    0%{transform:rotate(var(--a1,16deg)) translateX(-60%);}
+    13%{transform:rotate(var(--a1,16deg)) translateX(60%);}
+    46%{transform:rotate(var(--a1,16deg)) translateX(60%);}
+    46.01%{transform:rotate(var(--a2,-22deg)) translateX(60%);}
+    59%{transform:rotate(var(--a2,-22deg)) translateX(-60%);}
+    100%{transform:rotate(var(--a2,-22deg)) translateX(-60%);}}
   @keyframes badgeBreath{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
   .wall .empty{grid-column:1/-1;display:flex;align-items:center;justify-content:center;color:rgba(240,227,214,.45);
     font-weight:600;font-size:15px;text-align:center;padding:40px;line-height:1.5;}
@@ -2656,6 +2663,21 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   }
   function track(meta){ if(channel) try{channel.track(meta);}catch(e){} }
   function cmd(payload){ if(channel) try{channel.send({type:'broadcast',event:'cmd',payload:payload});}catch(e){} }
+  /* ---- persistance serveur du vote (table pc_votes) ---- */
+  function dbUpsert(code,id,nom,quali,vote,round){
+    if(!client||!id)return;
+    try{var pr=client.from('pc_votes').upsert({code:code,expert_id:id,nom:nom||null,quali:quali||null,vote:vote||null,round:round||1,updated_at:new Date().toISOString()},{onConflict:'code,expert_id'});
+      if(pr&&pr.then)pr.then(function(){},function(){});}catch(e){}
+  }
+  function dbLoad(code,cb){
+    if(!client){cb&&cb(null);return;}
+    try{var pr=client.from('pc_votes').select('expert_id,nom,quali,vote,round').eq('code',code);
+      pr.then(function(r){cb&&cb(r&&!r.error?(r.data||[]):null);},function(){cb&&cb(null);});}catch(e){cb&&cb(null);}
+  }
+  function dbClear(code){
+    if(!client)return;
+    try{var pr=client.from('pc_votes').delete().eq('code',code);if(pr&&pr.then)pr.then(function(){},function(){});}catch(e){}
+  }
 
   var sessQ = hashParam('s');           // présent => mode tablette
   var urlQ  = hashParam('q') ? dec(hashParam('q')) : '';  // question de secours
@@ -2693,10 +2715,24 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
     newround.addEventListener('click',function(){
       ROUND++; voteMap={};
+      dbClear(CODE);
       cmd({kind:'reset',round:ROUND});
       drawWall();
     });
 
+    function applyRow(r){
+      if(!r||!r.expert_id)return;
+      knownExperts[r.expert_id]={nom:r.nom,quali:r.quali};
+      if(!seenIds[r.expert_id])seenIds[r.expert_id]=1;
+      if((r.round||1)===ROUND)voteMap[r.expert_id]=r.vote||null;
+    }
+    function recoverVotes(){
+      dbLoad(CODE,function(rows){
+        if(!rows||!rows.length)return;
+        var mx=ROUND;rows.forEach(function(r){if((r.round||1)>mx)mx=r.round;});
+        ROUND=mx;rows.forEach(applyRow);drawWall();
+      });
+    }
     function regieCmd(p){
       if(p.kind==='vote'){
         if(p.id){voteMap[p.id]=p.vote||null;if(p.nom)knownExperts[p.id]={nom:p.nom,quali:p.quali};}
@@ -2746,12 +2782,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       if(anyNew){cmd({kind:'question',text:QUESTION,round:ROUND});}
       drawWall();
     }
-    function sweepOffline(){
-      var now=Date.now(),changed=false;
-      for(var id in offlineSince){ if(now-offlineSince[id]>GRACE){delete knownExperts[id];delete voteMap[id];delete seenIds[id];delete offlineSince[id];changed=true;} }
-      if(changed)drawWall();
-    }
-    setInterval(sweepOffline,15000);
+    function sweepOffline(){}  // plus de retrait auto : l'expant reste (vote conservé en mémoire + serveur)
     var slotEls=[];
     function gridFor(n){
       var slots=Math.max(4,n);
@@ -2768,15 +2799,17 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
         wallEmpty.style.display='';if(!wall.contains(wallEmpty))wall.appendChild(wallEmpty);tally.innerHTML='';return;}
       wallEmpty.style.display='none';if(wall.contains(wallEmpty))wallEmpty.remove();
       var p=0,c=0,w=0,seen={};
+      var A1=[14,-26,32,-18,24,-30],A2=[-24,30,-15,27,-32,17];
       ids.forEach(function(id,idx){
         var info=knownExperts[id],vote=voteMap[id]||null,off=!!offlineSince[id];seen[id]=1;
         var e={nom:info.nom,quali:info.quali,vote:vote,offline:off};
         if(vote==='pour')p++;else if(vote==='contre')c++;else w++;
         var sig=(vote||'wait')+'|'+(info.nom||'')+'|'+(info.quali||'')+'|'+(QUESTION||'')+'|'+(off?'off':'on');
         var parts=cardParts(e),rec=cardMap[id];
+        function setv(el){el.style.setProperty('--sd',(idx*1.15)+'s');el.style.setProperty('--a1',A1[idx%6]+'deg');el.style.setProperty('--a2',A2[idx%6]+'deg');}
         if(!rec){var el=document.createElement('div');el.className=parts.cls;el.innerHTML=parts.inner;
-          el.style.setProperty('--sd',(idx*1.15)+'s');wall.appendChild(el);cardMap[id]={el:el,sig:sig};}
-        else if(rec.sig!==sig){rec.el.className=parts.cls;rec.el.innerHTML=parts.inner;rec.el.style.setProperty('--sd',(idx*1.15)+'s');rec.sig=sig;}
+          setv(el);wall.appendChild(el);cardMap[id]={el:el,sig:sig};}
+        else if(rec.sig!==sig){rec.el.className=parts.cls;rec.el.innerHTML=parts.inner;setv(rec.el);rec.sig=sig;}
       });
       for(var id2 in cardMap){if(!seen[id2]){cardMap[id2].el.remove();delete cardMap[id2];}}
       var n=ids.length,g=gridFor(n),pad=g.cols*g.rows-n;
@@ -2815,12 +2848,17 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       note.textContent='Connexion temps réel en cours…';
       buildQR();
       connect(CODE,'regie',renderWall,regieCmd);
+      try{channel.on('postgres_changes',{event:'*',schema:'public',table:'pc_votes',filter:'code=eq.'+CODE},function(payload){
+        var r=payload&&(payload.new||payload.record);if(r){applyRow(r);drawWall();}
+      });}catch(e){}
       drawWall();
+      recoverVotes();
       channel.subscribe(function(s){
         console.log('[regie] realtime status:',s);
         if(s==='SUBSCRIBED'){
           note.className='rtNote ok';
           note.textContent='Réplication live active — les votes des experts s\u2019affichent ici en direct.';
+          recoverVotes();
         }else if(s==='CHANNEL_ERROR'||s==='TIMED_OUT'||s==='CLOSED'){
           note.className='rtNote off';
           note.textContent='Connexion temps réel impossible ('+s+'). Vérifie dans Supabase que Realtime est activé pour le projet et que la clé anon est correcte.';
@@ -2859,11 +2897,20 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     function trackIdentity(){var c=loadId()||{};if(c.nom)track({role:'expert',id:MYID,nom:c.nom,quali:c.quali});}
     function sendVote(vote){var c=loadId()||{};cmd({kind:'vote',id:MYID,nom:c.nom,quali:c.quali,vote:vote||null});}
     function sendHello(){var c=loadId()||{};cmd({kind:'hello',id:MYID,nom:c.nom,quali:c.quali});}
+    function persistVote(vote){var c=loadId()||{};if(!c.nom)return;dbUpsert(sessQ,MYID,c.nom,c.quali,vote||null,lastRound==null?1:lastRound);}
+    function syncRound(r){
+      if(r==null)return;
+      if(r!==lastRound){
+        lastRound=r;
+        if(setup.classList.contains('hidden')){reset();}  // en jeu -> retour écran de vote pour la nouvelle manche
+        persistVote(null);                                 // ré-inscription dans la manche courante
+      }
+    }
 
     start.addEventListener('click',function(){
       if(start.disabled)return;var o={nom:nom.value.trim(),quali:quali.value.trim()};
       saveId(o);ME=o;applyId(o);setup.classList.add('hidden');showTablette();reset();
-      trackIdentity();sendHello();
+      trackIdentity();sendHello();persistVote(null);
     });
     $('editBtn').addEventListener('click',openSetup);
 
@@ -2877,21 +2924,21 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
         vWord.textContent=pour?'Pour':'Contre';vIcon.innerHTML=pour?CHECK:CROSS;
         verdict.classList.remove('pour','contre');verdict.classList.add(pour?'pour':'contre');
         setTimeout(function(){verdict.classList.add('show');},360);
-        sendVote(pour?'pour':'contre');
+        sendVote(pour?'pour':'contre');persistVote(pour?'pour':'contre');
       });
     });
     function reset(){verdict.classList.remove('show');arena.classList.remove('decided');
       arena.querySelectorAll('.side').forEach(function(b){b.classList.remove('chosen');});}
-    replay.addEventListener('click',function(){reset();sendVote(null);});
+    replay.addEventListener('click',function(){reset();sendVote(null);persistVote(null);});
 
     /* réseau : tout en broadcast, identité en présence (un seul track) */
     function onCmd(p){
       if(p.kind==='question'){
         if(p.text!=null)setQuestion(p.text);
-        if(typeof p.round!=='undefined'&&lastRound===null)lastRound=p.round;
+        syncRound(p.round);
       }else if(p.kind==='reset'){
-        if(typeof p.round!=='undefined'){ if(p.round!==lastRound){lastRound=p.round;if(!setup.classList.contains('hidden'))reset();} }
-        else if(!setup.classList.contains('hidden')){reset();}
+        if(p.round==null){ if(setup.classList.contains('hidden')){reset();persistVote(null);} }
+        else syncRound(p.round);
       }
     }
 
