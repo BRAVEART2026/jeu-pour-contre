@@ -60,6 +60,10 @@
   .newround{font-family:inherit;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#fff;background:var(--rust);
     border:none;border-radius:40px;padding:11px 20px;cursor:pointer;box-shadow:0 8px 22px rgba(184,74,0,.35);}
   .newround:active{transform:scale(.97);}
+  .newq{font-family:inherit;font-weight:800;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--cream);background:transparent;
+    border:1.5px solid rgba(240,227,214,.28);border-radius:40px;padding:11px 20px;cursor:pointer;}
+  .newq:active{transform:scale(.97);}
+  .ractions{display:flex;gap:10px;align-items:center;}
 
   /* mur = cluster de cartes paysage centré ; tailles posées par JS (--cardw / --cardh) */
   .wall{flex:1 1 auto;display:grid;justify-content:center;align-content:center;gap:22px;min-height:0;}
@@ -256,7 +260,10 @@
         <div class="stageTop">
           <div class="wt">Le mur des experts</div>
           <div class="tally" id="tally"></div>
-          <button class="newround" id="newround">Nouvelle manche</button>
+          <div class="ractions">
+            <button class="newq" id="newq">Nouvelle question</button>
+            <button class="newround" id="newround">Nouvelle manche</button>
+          </div>
         </div>
         <div class="wall" id="wall">
           <div class="empty" id="wallEmpty">En attente de connexion des tablettes…<br>Fais scanner le QR code aux experts.</div>
@@ -2687,7 +2694,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   /* ====================================================== */
   function initRegie(){
     var regie=$('regie'),rq=$('rq'),qrbox=$('qrbox'),link=$('link'),copy=$('copy'),note=$('rtNote');
-    var wall=$('wall'),wallEmpty=$('wallEmpty'),tally=$('tally'),newround=$('newround');
+    var wall=$('wall'),wallEmpty=$('wallEmpty'),tally=$('tally'),newround=$('newround'),newq=$('newq');
     var CODE='plateau';
     var QUESTION='';
 
@@ -2714,10 +2721,15 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     },180);});
 
     newround.addEventListener('click',function(){
-      ROUND++; voteMap={};
+      ROUND++; voteMap={}; QUESTION=''; rq.value='';
       dbClear(CODE);
       cmd({kind:'reset',round:ROUND});
-      drawWall();
+      drawWall(); rq.focus();
+    });
+    newq.addEventListener('click',function(){
+      if(!RT){alert('La temps réel doit être actif pour générer une nouvelle session.');return;}
+      if(!confirm('Nouvelle question : les experts actuels seront détachés et devront rescanner le QR code. Continuer ?'))return;
+      newSession();
     });
 
     function applyRow(r){
@@ -2839,13 +2851,8 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     }
     var rzT;window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(drawWall,120);});
 
-    if(!RT){
-      note.className='rtNote off';
-      note.textContent='Réplication désactivée — renseigne tes clés Supabase (2 lignes en haut du fichier). Le jeu reste jouable, mais sans le mur des experts.';
-      buildQR();qrbox.className='qrbox';
-    }else{
-      note.className='rtNote off';
-      note.textContent='Connexion temps réel en cours…';
+    function joinSession(){
+      note.className='rtNote off';note.textContent='Connexion temps réel en cours…';
       buildQR();
       connect(CODE,'regie',renderWall,regieCmd);
       try{channel.on('postgres_changes',{event:'*',schema:'public',table:'pc_votes',filter:'code=eq.'+CODE},function(payload){
@@ -2864,6 +2871,27 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
           note.textContent='Connexion temps réel impossible ('+s+'). Vérifie dans Supabase que Realtime est activé pour le projet et que la clé anon est correcte.';
         }
       });
+    }
+    function newSession(){
+      var oldClient=client,oldChannel=channel,oldCode=CODE;
+      // remise à zéro complète du plateau
+      knownExperts={};voteMap={};seenIds={};offlineSince={};ROUND=1;
+      for(var k in cardMap){cardMap[k].el.remove();delete cardMap[k];}
+      slotEls.forEach(function(e){e.remove();});slotEls=[];
+      QUESTION='';rq.value='';
+      CODE='plateau-'+Math.random().toString(36).slice(2,7); // nouveau code => nouveau QR, anciens experts détachés
+      joinSession();                                          // (ré)assigne client/channel sur la nouvelle session
+      try{if(oldClient&&oldChannel)oldClient.removeChannel(oldChannel);}catch(e){} // ferme l'ancien canal
+      try{dbClear(oldCode);}catch(e){}                        // nettoie les votes de l'ancienne session
+      rq.focus();
+    }
+
+    if(!RT){
+      note.className='rtNote off';
+      note.textContent='Réplication désactivée — renseigne tes clés Supabase (2 lignes en haut du fichier). Le jeu reste jouable, mais sans le mur des experts.';
+      buildQR();qrbox.className='qrbox';
+    }else{
+      joinSession();
     }
   }
 
