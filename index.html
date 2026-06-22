@@ -95,7 +95,6 @@
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
   .regie.broadcast .wall{flex:1 1 auto;overflow:visible;}
-  .regie.broadcast #exitZone{display:block;}
 
   .regie.broadcast .ecard .mname{font-size:10cqmin;}
   .regie.broadcast .ecard .mqual{font-size:4.2cqmin;opacity:.78;}
@@ -107,7 +106,7 @@
 
 
   /* mur = cluster de cartes paysage centré ; tailles posées par JS (--cardw / --cardh) */
-  .wall{flex:1 1 auto;display:grid;justify-content:center;align-content:center;gap:22px;min-height:0;position:relative;}
+  .wall{flex:1 1 auto;display:grid;justify-content:center;align-content:center;gap:22px;min-height:0;}
   .ecard{position:relative;width:var(--cardw,300px);height:var(--cardh,225px);
     border-radius:clamp(16px,1.3vw,22px);overflow:hidden;display:flex;flex-direction:column;
     container-type:size;transition:background .35s ease,opacity .35s ease,filter .35s ease,transform .35s ease;}
@@ -308,7 +307,7 @@
         </div>
         <div id="wallQ"><div class="wq-eyebrow">Question de la manche</div><div class="wq-text"></div></div>
         <div id="wallTally"></div>
-        <div class="wall" id="wall"><div id="exitZone" style="display:none;position:absolute;top:0;left:0;width:var(--cardw,300px);height:var(--cardh,225px);z-index:50;cursor:default;"></div>
+        <div class="wall" id="wall">
           <div class="empty" id="wallEmpty">En attente de connexion des tablettes…<br>Fais scanner le QR code aux experts.</div>
         </div>
       </div>
@@ -2786,8 +2785,6 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       if(on){var wqText=wallQ.querySelector('.wq-text');if(wqText)wqText.textContent=QUESTION||'';wallTally.innerHTML=tally.innerHTML;}
       setTimeout(drawWall,30);
     }
-    var exitZone=$('exitZone');
-    if(exitZone)exitZone.addEventListener('click',function(){toggleBroadcast(false);});
     btnBroadcast.addEventListener('click',function(){toggleBroadcast();});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('regie').classList.contains('broadcast'))toggleBroadcast(false);});
 
@@ -2939,6 +2936,11 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       wall.style.setProperty('--cardw',cardw+'px');
       wall.style.setProperty('--cardh',cardh+'px');
     }
+    wall.addEventListener('click',function(e){
+      if(!$('regie').classList.contains('broadcast'))return;
+      var firstCard=wall.querySelector('.ecard');
+      if(firstCard&&(e.target===firstCard||firstCard.contains(e.target)))toggleBroadcast(false);
+    });
     var rzT;window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(drawWall,120);});
 
     function joinSession(){
