@@ -80,8 +80,8 @@
     letter-spacing:-.5px;max-width:1200px;margin:0 auto;}
   #wallTally{display:none;align-items:center;justify-content:center;gap:28px;padding:10px 0 28px;}
   #wallTally .tpour,#wallTally .tcontre,#wallTally .tattente{display:flex;flex-direction:row;align-items:baseline;gap:10px;}
-  #wallTally .tscore{font-size:clamp(32px,4.5vw,66px);font-weight:900;line-height:1;letter-spacing:-1px;}
-  #wallTally .tlabel{font-size:clamp(13px,1.4vw,22px);font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.85;}
+  #wallTally .tscore{font-size:clamp(22px,2.8vw,44px);font-weight:900;line-height:1;letter-spacing:-1px;}
+  #wallTally .tlabel{font-size:clamp(12px,1.2vw,18px);font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.85;}
   #wallTally .tpour .tscore,#wallTally .tpour .tlabel{color:var(--sage);}
   #wallTally .tcontre .tscore,#wallTally .tcontre .tlabel{color:#d98a4f;}
   #wallTally .tattente .tscore,#wallTally .tattente .tlabel{color:rgba(240,227,214,.4);}
@@ -2799,7 +2799,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     }
     function recoverVotes(){
       dbLoad(CODE,function(rows){
-        if(!rows||!rows.length)return;
+        if(!rows||!rows.length){drawWall();return;}
         var mx=ROUND;rows.forEach(function(r){if((r.round||1)>mx)mx=r.round;});
         ROUND=mx;rows.forEach(applyRow);drawWall();
       });
@@ -2811,6 +2811,16 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       }else if(p.kind==='hello'){
         if(p.id&&p.nom)knownExperts[p.id]={nom:p.nom,quali:p.quali};
         cmd({kind:'question',text:QUESTION,round:ROUND});
+        drawWall();
+      }else if(p.kind==='question'){
+        // reçu depuis le poste régie animateur — sync question sur vMix et autres instances
+        if(p.text!==undefined){QUESTION=p.text||'';rq.value=QUESTION;}
+        if(p.round&&p.round>ROUND)ROUND=p.round;
+        drawWall();
+      }else if(p.kind==='reset'){
+        // nouvelle manche lancée depuis le poste régie
+        if(p.round)ROUND=p.round;
+        voteMap={};QUESTION='';rq.value='';
         drawWall();
       }
     }
