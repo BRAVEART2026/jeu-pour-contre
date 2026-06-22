@@ -73,17 +73,17 @@
   .btnBroadcast.active{color:var(--petrole);background:var(--sage);border-color:var(--sage);}
   .btnBroadcast.active:hover{background:var(--sage-deep);}
 
-  #wallQ{display:none;text-align:center;padding:0 40px 4px;}
-  #wallQ .wq-eyebrow{font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
-    color:var(--rust);margin-bottom:14px;opacity:.82;}
-  #wallQ .wq-text{font-size:clamp(24px,3.2vw,52px);font-weight:900;line-height:1.1;color:#fff;
+  #wallQ{display:none;text-align:center;padding:0 30px 0;}
+  #wallQ .wq-eyebrow{font-size:10px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
+    color:var(--rust);margin-bottom:6px;opacity:.75;}
+  #wallQ .wq-text{font-size:clamp(26px,3.8vw,62px);font-weight:900;line-height:1.05;color:#fff;
     letter-spacing:-.5px;max-width:1200px;margin:0 auto;}
-  #wallTally{display:none;justify-content:center;gap:14px;padding:8px 0 12px;}
+  #wallTally{display:none;justify-content:center;gap:12px;padding:6px 0 10px;}
 
   .regie.broadcast .rpanel{display:none;}
   .regie.broadcast .rhead{display:none;}
   .regie.broadcast .rbody{flex:1;}
-  .regie.broadcast .rstage{padding:20px 30px 16px;justify-content:flex-start;overflow:hidden;}
+  .regie.broadcast .rstage{padding:12px 24px 10px;justify-content:flex-start;overflow:hidden;}
   .regie.broadcast .stageTop{display:none;}
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
@@ -95,7 +95,7 @@
   .regie.broadcast .ecard .mchip{font-size:3.2cqmin;padding:2.5cqmin 0;}
 
   /* Pilule taille héro pour le tally broadcast */
-  #wallTally .pill{font-size:16px;padding:11px 22px;}
+  #wallTally .pill{font-size:14px;padding:9px 18px;}
 
 
   /* mur = cluster de cartes paysage centré ; tailles posées par JS (--cardw / --cardh) */
@@ -2844,14 +2844,6 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     function sweepOffline(){}  // plus de retrait auto : l'expant reste (vote conservé en mémoire + serveur)
     var slotEls=[];
     function gridFor(n){
-      var isBroadcast=$('regie').classList.contains('broadcast');
-      if(isBroadcast){
-        // layout TV : on maximise les colonnes pour remplir la largeur
-        var cols=n<=4?4:n<=6?3:4;
-        var slots=Math.ceil(n/cols)*cols; // arrondi au prochain multiple
-        var rows=Math.ceil(slots/cols);
-        return {cols:cols,rows:rows};
-      }
       var slots=Math.max(4,n);
       var cols=slots<=4?2:(slots<=9?3:4);
       if(window.innerWidth<=1100)cols=(slots<=2?1:2);
@@ -2897,20 +2889,11 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       layoutWall(g);
     }
     function layoutWall(g){
-      var gap=16,ratio=4/3,rect=wall.getBoundingClientRect();
-      var isBroadcast=$('regie').classList.contains('broadcast');
-      var cardw,cardh;
-      if(isBroadcast){
-        // broadcast : pleine largeur, contrainte par la hauteur disponible
-        var cw=(rect.width-gap*(g.cols-1))/g.cols;
-        var ch=(rect.height-gap*(g.rows-1))/g.rows;
-        cardw=Math.max(180,Math.floor(Math.min(cw*0.97,ch*ratio*0.97)));
-      }else{
-        var cw=(rect.width-gap*(g.cols-1))/g.cols;
-        var ch=(rect.height-gap*(g.rows-1))/g.rows;
-        cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
-      }
-      cardh=Math.round(cardw/ratio);
+      var gap=20,ratio=4/3,rect=wall.getBoundingClientRect();
+      var cw=(rect.width-gap*(g.cols-1))/g.cols;
+      var ch=(rect.height-gap*(g.rows-1))/g.rows;
+      var cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
+      var cardh=Math.round(cardw/ratio);
       wall.style.gridTemplateColumns='repeat('+g.cols+',var(--cardw))';
       wall.style.gridAutoRows='var(--cardh)';
       wall.style.gridTemplateRows='';
