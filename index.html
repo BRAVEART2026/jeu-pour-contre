@@ -73,17 +73,17 @@
   .btnBroadcast.active{color:var(--petrole);background:var(--sage);border-color:var(--sage);}
   .btnBroadcast.active:hover{background:var(--sage-deep);}
 
-  #wallQ{display:none;text-align:center;padding:0 40px 8px;}
+  #wallQ{display:none;text-align:center;padding:0 40px 4px;}
   #wallQ .wq-eyebrow{font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
     color:var(--rust);margin-bottom:14px;opacity:.82;}
-  #wallQ .wq-text{font-size:clamp(28px,3.6vw,58px);font-weight:900;line-height:1.12;color:#fff;
+  #wallQ .wq-text{font-size:clamp(22px,2.8vw,46px);font-weight:900;line-height:1.1;color:#fff;
     letter-spacing:-.5px;max-width:1100px;margin:0 auto;}
-  #wallTally{display:none;justify-content:center;gap:14px;padding:14px 0 20px;}
+  #wallTally{display:none;justify-content:center;gap:14px;padding:8px 0 12px;}
 
   .regie.broadcast .rpanel{display:none;}
   .regie.broadcast .rhead{display:none;}
   .regie.broadcast .rbody{flex:1;}
-  .regie.broadcast .rstage{padding:32px 40px 26px;justify-content:flex-start;}
+  .regie.broadcast .rstage{padding:20px 30px 16px;justify-content:flex-start;}
   .regie.broadcast .stageTop{display:none;}
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
@@ -2885,21 +2885,22 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     }
     function layoutWall(g){
       var gap=22,ratio=4/3,rect=wall.getBoundingClientRect();
-      var cw=(rect.width-gap*(g.cols-1))/g.cols;
-      var ch=(rect.height-gap*(g.rows-1))/g.rows;
-      var cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
-      var cardh=Math.round(cardw/ratio);
-      // En mode diffusion : agrandit les cartes pour exploiter l'espace disponible
       var isBroadcast=$('regie').classList.contains('broadcast');
+      var cardw,cardh;
       if(isBroadcast){
+        // broadcast : sizing par la largeur d'abord (cartes larges)
         var n=g.cols*g.rows;
-        // facteur selon densité : 4 cartes=85%, 6=80%, 8+=75%
-        var factor=n<=4?0.85:n<=6?0.80:0.75;
-        var maxW=Math.floor(rect.width/g.cols*factor);
-        var maxH=Math.floor(rect.height/g.rows*factor);
-        cardw=Math.max(cardw,Math.floor(Math.min(maxW,maxH*ratio)));
-        cardh=Math.round(cardw/ratio);
+        var wFactor=n<=4?0.94:n<=6?0.91:0.88;
+        var cardwByWidth=Math.floor((rect.width-gap*(g.cols-1))/g.cols*wFactor);
+        var cardwByHeight=Math.floor(((rect.height-gap*(g.rows-1))/g.rows)*ratio*0.94);
+        cardw=Math.max(cardwByWidth,cardwByHeight);
+        cardw=Math.max(200,cardw);
+      }else{
+        var cw=(rect.width-gap*(g.cols-1))/g.cols;
+        var ch=(rect.height-gap*(g.rows-1))/g.rows;
+        cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
       }
+      cardh=Math.round(cardw/ratio);
       wall.style.gridTemplateColumns='repeat('+g.cols+',var(--cardw))';
       wall.style.gridAutoRows='var(--cardh)';
       wall.style.gridTemplateRows='';
