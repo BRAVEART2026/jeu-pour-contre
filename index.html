@@ -2760,11 +2760,13 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     rq.addEventListener('input',function(){clearTimeout(deb);deb=setTimeout(function(){
       QUESTION=rq.value.trim();
       cmd({kind:'question',text:QUESTION,round:ROUND});
+      dbUpsert(CODE,'__meta__',QUESTION,'',null,ROUND); // persistance question pour vMix
     },180);});
 
     newround.addEventListener('click',function(){
       ROUND++; voteMap={}; QUESTION=''; rq.value='';
       dbClear(CODE);
+      dbUpsert(CODE,'__meta__','','',null,ROUND);
       cmd({kind:'reset',round:ROUND});
       drawWall(); rq.focus();
     });
@@ -2787,6 +2789,10 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
     function applyRow(r){
       if(!r||!r.expert_id)return;
+      if(r.expert_id==='__meta__'){
+        if(r.nom&&!QUESTION){QUESTION=r.nom;rq.value=r.nom;}  // restaure question si page fraîche
+        return;
+      }
       knownExperts[r.expert_id]={nom:r.nom,quali:r.quali};
       if(!seenIds[r.expert_id])seenIds[r.expert_id]=1;
       if((r.round||1)===ROUND)voteMap[r.expert_id]=r.vote||null;
