@@ -78,12 +78,19 @@
     color:var(--rust);margin-bottom:6px;opacity:.75;}
   #wallQ .wq-text{font-size:clamp(26px,3.8vw,62px);font-weight:900;line-height:1.05;color:#fff;
     letter-spacing:-.5px;max-width:1200px;margin:0 auto;}
-  #wallTally{display:none;justify-content:center;gap:12px;padding:6px 0 10px;}
+  #wallTally{display:none;align-items:center;justify-content:center;gap:28px;padding:10px 0 28px;}
+  #wallTally .tpour,#wallTally .tcontre,#wallTally .tattente{display:flex;flex-direction:row;align-items:baseline;gap:10px;}
+  #wallTally .tscore{font-size:clamp(32px,4.5vw,66px);font-weight:900;line-height:1;letter-spacing:-1px;}
+  #wallTally .tlabel{font-size:clamp(13px,1.4vw,22px);font-weight:800;letter-spacing:3px;text-transform:uppercase;opacity:.85;}
+  #wallTally .tpour .tscore,#wallTally .tpour .tlabel{color:var(--sage);}
+  #wallTally .tcontre .tscore,#wallTally .tcontre .tlabel{color:#d98a4f;}
+  #wallTally .tattente .tscore,#wallTally .tattente .tlabel{color:rgba(240,227,214,.4);}
+  #wallTally .tsep{width:1px;height:38px;background:rgba(240,227,214,.15);align-self:center;}
 
   .regie.broadcast .rpanel{display:none;}
   .regie.broadcast .rhead{display:none;}
   .regie.broadcast .rbody{flex:1;}
-  .regie.broadcast .rstage{padding:12px 24px 10px;justify-content:flex-start;overflow:hidden;}
+  .regie.broadcast .rstage{padding:32px 24px 10px;justify-content:flex-start;overflow:hidden;}
   .regie.broadcast .stageTop{display:none;}
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
@@ -2729,6 +2736,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   function initRegie(){
     var regie=$('regie'),rq=$('rq'),qrbox=$('qrbox'),link=$('link'),copy=$('copy'),note=$('rtNote');
     var wall=$('wall'),wallEmpty=$('wallEmpty'),tally=$('tally'),newround=$('newround'),newq=$('newq');
+    var wallQ=$('wallQ'),wallTally=$('wallTally'),btnBroadcast=$('btnBroadcast');
     var CODE='plateau';
     var QUESTION='';
 
