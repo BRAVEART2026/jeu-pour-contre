@@ -76,18 +76,23 @@
   #wallQ{display:none;text-align:center;padding:0 40px 4px;}
   #wallQ .wq-eyebrow{font-size:11px;font-weight:700;letter-spacing:4px;text-transform:uppercase;
     color:var(--rust);margin-bottom:14px;opacity:.82;}
-  #wallQ .wq-text{font-size:clamp(22px,2.8vw,46px);font-weight:900;line-height:1.1;color:#fff;
-    letter-spacing:-.5px;max-width:1100px;margin:0 auto;}
+  #wallQ .wq-text{font-size:clamp(24px,3.2vw,52px);font-weight:900;line-height:1.1;color:#fff;
+    letter-spacing:-.5px;max-width:1200px;margin:0 auto;}
   #wallTally{display:none;justify-content:center;gap:14px;padding:8px 0 12px;}
 
   .regie.broadcast .rpanel{display:none;}
   .regie.broadcast .rhead{display:none;}
   .regie.broadcast .rbody{flex:1;}
-  .regie.broadcast .rstage{padding:20px 30px 16px;justify-content:flex-start;}
+  .regie.broadcast .rstage{padding:20px 30px 16px;justify-content:flex-start;overflow:hidden;}
   .regie.broadcast .stageTop{display:none;}
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
-  .regie.broadcast .wall{flex:1 1 auto;}
+  .regie.broadcast .wall{flex:1 1 auto;overflow:visible;}
+  .regie.broadcast .ecard .mname{font-size:10cqmin;}
+  .regie.broadcast .ecard .mqual{font-size:4.2cqmin;opacity:.78;}
+  .regie.broadcast .ecard .mtop{font-size:3.2cqmin;}
+  .regie.broadcast .ecard .mvcarton{font-size:5.5cqmin;padding:2.8cqmin 5cqmin;}
+  .regie.broadcast .ecard .mchip{font-size:3.2cqmin;padding:2.5cqmin 0;}
 
   /* Pilule taille héro pour le tally broadcast */
   #wallTally .pill{font-size:16px;padding:11px 22px;}
@@ -2839,6 +2844,14 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     function sweepOffline(){}  // plus de retrait auto : l'expant reste (vote conservé en mémoire + serveur)
     var slotEls=[];
     function gridFor(n){
+      var isBroadcast=$('regie').classList.contains('broadcast');
+      if(isBroadcast){
+        // layout TV : on maximise les colonnes pour remplir la largeur
+        var cols=n<=4?4:n<=6?3:4;
+        var slots=Math.ceil(n/cols)*cols; // arrondi au prochain multiple
+        var rows=Math.ceil(slots/cols);
+        return {cols:cols,rows:rows};
+      }
       var slots=Math.max(4,n);
       var cols=slots<=4?2:(slots<=9?3:4);
       if(window.innerWidth<=1100)cols=(slots<=2?1:2);
@@ -2884,17 +2897,14 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       layoutWall(g);
     }
     function layoutWall(g){
-      var gap=22,ratio=4/3,rect=wall.getBoundingClientRect();
+      var gap=16,ratio=4/3,rect=wall.getBoundingClientRect();
       var isBroadcast=$('regie').classList.contains('broadcast');
       var cardw,cardh;
       if(isBroadcast){
-        // broadcast : sizing par la largeur d'abord (cartes larges)
-        var n=g.cols*g.rows;
-        var wFactor=n<=4?0.94:n<=6?0.91:0.88;
-        var cardwByWidth=Math.floor((rect.width-gap*(g.cols-1))/g.cols*wFactor);
-        var cardwByHeight=Math.floor(((rect.height-gap*(g.rows-1))/g.rows)*ratio*0.94);
-        cardw=Math.max(cardwByWidth,cardwByHeight);
-        cardw=Math.max(200,cardw);
+        // broadcast : pleine largeur, contrainte par la hauteur disponible
+        var cw=(rect.width-gap*(g.cols-1))/g.cols;
+        var ch=(rect.height-gap*(g.rows-1))/g.rows;
+        cardw=Math.max(180,Math.floor(Math.min(cw*0.97,ch*ratio*0.97)));
       }else{
         var cw=(rect.width-gap*(g.cols-1))/g.cols;
         var ch=(rect.height-gap*(g.rows-1))/g.rows;
