@@ -111,7 +111,7 @@
   .ecard .mmid{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.4cqmin;width:100%;}
   .ecard .mname{font-weight:900;font-size:15cqmin;line-height:1.0;letter-spacing:-.5px;width:100%;
     display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;}
-  .ecard .mqual{font-weight:600;font-size:3.2cqmin;letter-spacing:2px;text-transform:uppercase;opacity:.62;line-height:1.25;}
+  .ecard .mqual{font-weight:600;font-size:4.8cqmin;letter-spacing:2px;text-transform:uppercase;opacity:.75;line-height:1.25;}
 
   /* --- état EN ATTENTE --- */
   .ecard.wait{background:rgba(255,255,255,.035);border:1.5px solid rgba(240,227,214,.12);}
@@ -2889,6 +2889,17 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       var ch=(rect.height-gap*(g.rows-1))/g.rows;
       var cardw=Math.max(150,Math.floor(Math.min(cw,ch*ratio)));
       var cardh=Math.round(cardw/ratio);
+      // En mode diffusion : agrandit les cartes pour exploiter l'espace disponible
+      var isBroadcast=$('regie').classList.contains('broadcast');
+      if(isBroadcast){
+        var n=g.cols*g.rows;
+        // facteur selon densité : 4 cartes=85%, 6=80%, 8+=75%
+        var factor=n<=4?0.85:n<=6?0.80:0.75;
+        var maxW=Math.floor(rect.width/g.cols*factor);
+        var maxH=Math.floor(rect.height/g.rows*factor);
+        cardw=Math.max(cardw,Math.floor(Math.min(maxW,maxH*ratio)));
+        cardh=Math.round(cardw/ratio);
+      }
       wall.style.gridTemplateColumns='repeat('+g.cols+',var(--cardw))';
       wall.style.gridAutoRows='var(--cardh)';
       wall.style.gridTemplateRows='';
