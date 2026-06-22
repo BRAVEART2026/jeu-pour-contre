@@ -95,6 +95,12 @@
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
   .regie.broadcast .wall{flex:1 1 auto;overflow:visible;}
+  #btnExitBroadcast{display:none;position:fixed;top:14px;right:18px;z-index:200;
+    font-family:inherit;font-size:13px;font-weight:700;color:rgba(240,227,214,.35);
+    background:transparent;border:none;cursor:pointer;padding:6px 10px;border-radius:8px;
+    transition:color .2s,background .2s;letter-spacing:1px;}
+  #btnExitBroadcast:hover{color:var(--cream);background:rgba(240,227,214,.12);}
+  .regie.broadcast #btnExitBroadcast{display:block;}
   .regie.broadcast .ecard .mname{font-size:10cqmin;}
   .regie.broadcast .ecard .mqual{font-size:4.2cqmin;opacity:.78;}
   .regie.broadcast .ecard .mtop{font-size:3.2cqmin;}
@@ -304,6 +310,7 @@
             <button class="newround" id="newround">Nouvelle manche</button>
           </div>
         </div>
+        <button id="btnExitBroadcast" title="Quitter la diffusion">✕</button>
         <div id="wallQ"><div class="wq-eyebrow">Question de la manche</div><div class="wq-text"></div></div>
         <div id="wallTally"></div>
         <div class="wall" id="wall">
@@ -2736,7 +2743,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   function initRegie(){
     var regie=$('regie'),rq=$('rq'),qrbox=$('qrbox'),link=$('link'),copy=$('copy'),note=$('rtNote');
     var wall=$('wall'),wallEmpty=$('wallEmpty'),tally=$('tally'),newround=$('newround'),newq=$('newq');
-    var wallQ=$('wallQ'),wallTally=$('wallTally'),btnBroadcast=$('btnBroadcast');
+    var wallQ=$('wallQ'),wallTally=$('wallTally'),btnBroadcast=$('btnBroadcast'),btnExitBroadcast=$('btnExitBroadcast');
     var CODE='plateau';
     var QUESTION='';
 
@@ -2785,12 +2792,13 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       setTimeout(drawWall,30);
     }
     btnBroadcast.addEventListener('click',function(){toggleBroadcast();});
+    btnExitBroadcast.addEventListener('click',function(){toggleBroadcast(false);});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('regie').classList.contains('broadcast'))toggleBroadcast(false);});
 
     function applyRow(r){
       if(!r||!r.expert_id)return;
       if(r.expert_id==='__meta__'){
-        if(r.nom&&!QUESTION){QUESTION=r.nom;rq.value=r.nom;}  // restaure question si page fraîche
+        if(r.nom){QUESTION=r.nom;rq.value=r.nom;}  // restaure toujours la dernière question persistée
         return;
       }
       knownExperts[r.expert_id]={nom:r.nom,quali:r.quali};
@@ -2940,12 +2948,18 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     function joinSession(){
       note.className='rtNote off';note.textContent='Connexion temps réel en cours…';
       buildQR();
+      dbUpsert('__global__','__session__',CODE,'',null,0); // partage le CODE actif avec vMix
       connect(CODE,'regie',renderWall,regieCmd);
       try{channel.on('postgres_changes',{event:'*',schema:'public',table:'pc_votes',filter:'code=eq.'+CODE},function(payload){
         var r=payload&&(payload.new||payload.record);if(r){applyRow(r);drawWall();}
       });}catch(e){}
       drawWall();
       recoverVotes();
+      // heartbeat : pousse l'état courant toutes les 4s pour vMix et autres instances passives
+      setInterval(function(){
+        if(QUESTION||Object.keys(knownExperts).length)
+          cmd({kind:'question',text:QUESTION,round:ROUND});
+      },4000);
       channel.subscribe(function(s){
         console.log('[regie] realtime status:',s);
         if(s==='SUBSCRIBED'){
