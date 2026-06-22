@@ -2895,7 +2895,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       var cw,ch,cardw;
       if(isBroadcast){
         // 70% de la largeur pour les cartes, 15% d'air de chaque côté
-        var usableW=rect.width*0.70;
+        var usableW=rect.width*0.75;
         cw=(usableW-gap*(g.cols-1))/g.cols;
         ch=(rect.height-gap*(g.rows-1))/g.rows;
         cardw=Math.max(180,Math.floor(Math.min(cw,ch*ratio)));
