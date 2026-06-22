@@ -95,12 +95,8 @@
   .regie.broadcast #wallQ{display:block;}
   .regie.broadcast #wallTally{display:flex;}
   .regie.broadcast .wall{flex:1 1 auto;overflow:visible;}
-  #btnExitBroadcast{display:none;position:fixed;top:14px;right:18px;z-index:200;
-    font-family:inherit;font-size:13px;font-weight:700;color:rgba(240,227,214,.35);
-    background:transparent;border:none;cursor:pointer;padding:6px 10px;border-radius:8px;
-    transition:color .2s,background .2s;letter-spacing:1px;}
-  #btnExitBroadcast:hover{color:var(--cream);background:rgba(240,227,214,.12);}
-  .regie.broadcast #btnExitBroadcast{display:block;}
+  .regie.broadcast #exitZone{display:block;}
+
   .regie.broadcast .ecard .mname{font-size:10cqmin;}
   .regie.broadcast .ecard .mqual{font-size:4.2cqmin;opacity:.78;}
   .regie.broadcast .ecard .mtop{font-size:3.2cqmin;}
@@ -111,7 +107,7 @@
 
 
   /* mur = cluster de cartes paysage centré ; tailles posées par JS (--cardw / --cardh) */
-  .wall{flex:1 1 auto;display:grid;justify-content:center;align-content:center;gap:22px;min-height:0;}
+  .wall{flex:1 1 auto;display:grid;justify-content:center;align-content:center;gap:22px;min-height:0;position:relative;}
   .ecard{position:relative;width:var(--cardw,300px);height:var(--cardh,225px);
     border-radius:clamp(16px,1.3vw,22px);overflow:hidden;display:flex;flex-direction:column;
     container-type:size;transition:background .35s ease,opacity .35s ease,filter .35s ease,transform .35s ease;}
@@ -310,10 +306,9 @@
             <button class="newround" id="newround">Nouvelle manche</button>
           </div>
         </div>
-        <button id="btnExitBroadcast" title="Quitter la diffusion">✕</button>
         <div id="wallQ"><div class="wq-eyebrow">Question de la manche</div><div class="wq-text"></div></div>
         <div id="wallTally"></div>
-        <div class="wall" id="wall">
+        <div class="wall" id="wall"><div id="exitZone" style="display:none;position:absolute;top:0;left:0;width:var(--cardw,300px);height:var(--cardh,225px);z-index:50;cursor:default;"></div>
           <div class="empty" id="wallEmpty">En attente de connexion des tablettes…<br>Fais scanner le QR code aux experts.</div>
         </div>
       </div>
@@ -2743,7 +2738,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
   function initRegie(){
     var regie=$('regie'),rq=$('rq'),qrbox=$('qrbox'),link=$('link'),copy=$('copy'),note=$('rtNote');
     var wall=$('wall'),wallEmpty=$('wallEmpty'),tally=$('tally'),newround=$('newround'),newq=$('newq');
-    var wallQ=$('wallQ'),wallTally=$('wallTally'),btnBroadcast=$('btnBroadcast'),btnExitBroadcast=$('btnExitBroadcast');
+    var wallQ=$('wallQ'),wallTally=$('wallTally'),btnBroadcast=$('btnBroadcast');
     var CODE='plateau';
     var QUESTION='';
 
@@ -2787,12 +2782,13 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       if(on===undefined)on=!r.classList.contains('broadcast');
       r.classList.toggle('broadcast',on);
       btnBroadcast.classList.toggle('active',on);
-      btnBroadcast.textContent=on?'✕ Quitter diffusion':'⬛ Diffusion';
+      btnBroadcast.textContent=on?'Quitter diffusion':'⬛ Diffusion';
       if(on){var wqText=wallQ.querySelector('.wq-text');if(wqText)wqText.textContent=QUESTION||'';wallTally.innerHTML=tally.innerHTML;}
       setTimeout(drawWall,30);
     }
+    var exitZone=$('exitZone');
+    if(exitZone)exitZone.addEventListener('click',function(){toggleBroadcast(false);});
     btnBroadcast.addEventListener('click',function(){toggleBroadcast();});
-    btnExitBroadcast.addEventListener('click',function(){toggleBroadcast(false);});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('regie').classList.contains('broadcast'))toggleBroadcast(false);});
 
     function applyRow(r){
