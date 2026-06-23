@@ -2860,13 +2860,21 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       if(!confirm('Nouvelle question : les experts actuels seront détachés et devront rescanner le QR code. Continuer ?'))return;
       newSession();
     });
+    var _beatAudio=null;
     function toggleBroadcast(on){
       var r=$('regie');
       if(on===undefined)on=!r.classList.contains('broadcast');
       r.classList.toggle('broadcast',on);
       btnBroadcast.classList.toggle('active',on);
       btnBroadcast.textContent=on?'Quitter diffusion':'⬛ Diffusion';
-      if(on){var wqText=wallQ.querySelector('.wq-text');if(wqText)wqText.textContent=QUESTION||'';wallTally.innerHTML=tally.innerHTML;}
+      if(on){
+        var wqText=wallQ.querySelector('.wq-text');if(wqText)wqText.textContent=QUESTION||'';
+        wallTally.innerHTML=tally.innerHTML;
+        if(!_beatAudio){_beatAudio=new Audio('beat.mp3');_beatAudio.loop=true;_beatAudio.volume=0.55;}
+        _beatAudio.currentTime=0;_beatAudio.play().catch(function(){});
+      }else{
+        if(_beatAudio){_beatAudio.pause();_beatAudio.currentTime=0;}
+      }
       setTimeout(drawWall,30);
     }
     btnBroadcast.addEventListener('click',function(){toggleBroadcast();});
