@@ -26,8 +26,8 @@ relié à Internet), jamais dans l'entrée navigateur de vMix :
   à coller dans une entrée Web Browser. Cette page reste en diffusion, ne saisit
   rien, n'écrit rien et suit d'elle-même le code de session de la régie (canal
   temps réel `pc-annonce`), y compris après « Nouvelle question ».
-- conducteur : la liste des questions se colle d'un coup, `| VF` en fin de ligne
-  pour une manche en Vrai / Faux ; un clic ou « Manche suivante » lance une
+- conducteur : la liste des questions se colle d'un coup, `| PC` en fin de ligne
+  pour une manche en Pour / Contre (Vrai / Faux par défaut) ; un clic ou « Manche suivante » lance une
   manche neuve (votes remis à zéro, question et mode poussés partout).
 
 Une seule régie active à la fois : deux régies ouvertes sur des codes différents

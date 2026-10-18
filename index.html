@@ -424,8 +424,8 @@
         <div class="cond">
           <div class="condHead"><div class="rlabel">Conducteur</div><button class="condBtn" id="condPaste">Coller une liste</button></div>
           <div class="condImp" id="condImp">
-            <textarea id="condTx" spellcheck="false" placeholder="Rénover soi-même coûte moins cher&#10;Le viager, c'est une bonne affaire | VF"></textarea>
-            <p>Une question par ligne, collée d'un coup (Word, mail, Excel). Ajouter <b>| VF</b> pour une manche en Vrai / Faux, sinon Pour / Contre.</p>
+            <textarea id="condTx" spellcheck="false" placeholder="Rénover soi-même coûte moins cher&#10;Pour ou contre la fin du DPE ? | PC"></textarea>
+            <p>Une question par ligne, collée d'un coup (Word, mail, Excel). Ajouter <b>| PC</b> pour une manche en Pour / Contre, sinon Vrai / Faux.</p>
             <div class="row"><button class="condBtn" id="condAdd">Ajouter à la suite</button><button class="condBtn ghost" id="condRep">Remplacer</button></div>
           </div>
           <div class="condList" id="condList"></div>
@@ -439,8 +439,8 @@
         <div>
           <div class="rlabel">Mode de vote</div>
           <div class="modeToggle" id="modeToggle">
-            <button id="modePc" class="active">Pour / Contre</button>
-            <button id="modeVf">Vrai / Faux</button>
+            <button id="modePc">Pour / Contre</button>
+            <button id="modeVf" class="active">Vrai / Faux</button>
           </div>
         </div>
         <div class="rtNote off" id="rtNote">Réplication désactivée — renseigne tes clés Supabase (2 lignes en haut du fichier).</div>
@@ -2907,7 +2907,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       copy.textContent='Copié';setTimeout(function(){copy.textContent='Copier';},1300);});
 
     var ROUND=1;
-    var MODE='pc'; // 'pc' = Pour/Contre, 'vf' = Vrai/Faux
+    var MODE='vf'; // 'vf' = Vrai/Faux (par défaut), 'pc' = Pour/Contre
     var LABELS={pc:{p:'Pour',c:'Contre'},vf:{p:'Vrai',c:'Faux'}};
     var voteMap={};      // id -> 'pour'/'contre'/null (votes reçus en broadcast)
     var knownExperts={}; // id -> {nom,quali}          (identité via présence)
@@ -2958,7 +2958,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       var out=[];
       txt.split(/\r?\n/).forEach(function(l){
         l=l.replace(/^\s*(\d+\s*[.)\-:]|[-•*])\s+/,'').trim();if(!l)return;
-        var parts=l.split(/\t|\s*\|\s*|\s*;\s*/).filter(function(x){return x.trim()!=='';}),q=parts.shift().trim(),m='pc';
+        var parts=l.split(/\t|\s*\|\s*|\s*;\s*/).filter(function(x){return x.trim()!=='';}),q=parts.shift().trim(),m='vf';
         parts.forEach(function(x){x=x.trim();
           if(/^(vf|v\s*\/\s*f|vrai\s*\/?\s*(ou\s+)?faux)$/i.test(x))m='vf';
           else if(/^(pc|p\s*\/\s*c|pour\s*\/?\s*(ou\s+)?contre)$/i.test(x))m='pc';});
@@ -3183,7 +3183,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
         drawWall();
       }else if(p.kind==='hello'){
         if(p.id&&p.nom)knownExperts[p.id]={nom:p.nom,quali:p.quali};
-        if(!ANT)cmd({kind:'question',text:QUESTION,round:ROUND});
+        if(!ANT){cmd({kind:'question',text:QUESTION,round:ROUND});cmd({kind:'mode',mode:MODE});}
         drawWall();
       }else if(p.kind==='question'){
         if(p.text!==undefined){QUESTION=p.text||'';if(document.activeElement!==rq)rq.value=QUESTION;}
@@ -3397,7 +3397,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     var barNom=$('barNom'),barQuali=$('barQuali'),qText=$('qText');
     var vQ=$('vQ'),vWord=$('vWord'),vIcon=$('vIcon'),vNom=$('vNom'),vQual=$('vQual');
     var KID='pc_id_v5';
-    var QUESTION=urlQ||'Pour ou contre ?';
+    var QUESTION=urlQ||'Vrai ou faux ?';
     var ME=loadId();
 
     function loadId(){try{return JSON.parse(localStorage.getItem(KID));}catch(e){return null;}}
@@ -3441,7 +3441,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
         btn.classList.add('chosen');arena.classList.add('decided');
         var c=loadId()||{};
         vQ.textContent=QUESTION;vNom.textContent=c.nom||'';vQual.textContent=c.quali||'';
-        vWord.textContent=pour?'Pour':'Contre';vIcon.innerHTML=pour?CHECK:CROSS;
+        vWord.textContent=pour?(TMODE[TM]||TMODE.vf).p:(TMODE[TM]||TMODE.vf).c;vIcon.innerHTML=pour?CHECK:CROSS;
         verdict.classList.remove('pour','contre');verdict.classList.add(pour?'pour':'contre');
         setTimeout(function(){verdict.classList.add('show');},360);
         sendVote(pour?'pour':'contre');persistVote(pour?'pour':'contre');
@@ -3456,8 +3456,10 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
     var btnContre=arena.querySelector('[data-vote="contre"]');
     var TMODE={pc:{p:'Pour',ps:'Je valide',c:'Contre',cs:"Je m'oppose"},
                vf:{p:'Vrai',ps:"C'est vrai",c:'Faux',cs:"C'est faux"}};
+    var TM='vf';
     function applyModeLabels(m){
-      var t=TMODE[m]||TMODE.pc;
+      if(TMODE[m])TM=m;
+      var t=TMODE[m]||TMODE.vf;
       if(btnPour){btnPour.querySelector('.label').textContent=t.p;btnPour.querySelector('.sub').textContent=t.ps;}
       if(btnContre){btnContre.querySelector('.label').textContent=t.c;btnContre.querySelector('.sub').textContent=t.cs;}
     }
@@ -3475,6 +3477,7 @@ var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
       }
     }
 
+    applyModeLabels(TM);
     setQuestion(QUESTION);
     var chip=document.createElement('div');chip.className='netchip wait';chip.textContent='\u25CF Connexion\u2026';document.body.appendChild(chip);
     function setChip(cls,txt){chip.style.opacity='1';chip.className='netchip '+cls;chip.textContent=txt;}
