@@ -17,6 +17,26 @@ Déploiement Vercel sans build, projet `jeu-pour-contre`, alias
 vercel deploy --prod
 ```
 
+## Pilotage depuis la régie, vMix en simple écran
+
+La saisie se fait sur la régie ouverte dans un vrai Chrome (n'importe quel poste
+relié à Internet), jamais dans l'entrée navigateur de vMix :
+
+- bouton « Copier le lien vMix » : `https://jeu-pour-contre.vercel.app/?antenne=1`,
+  à coller dans une entrée Web Browser. Cette page reste en diffusion, ne saisit
+  rien, n'écrit rien et suit d'elle-même le code de session de la régie (canal
+  temps réel `pc-annonce`), y compris après « Nouvelle question ».
+- conducteur : la liste des questions se colle d'un coup, `| VF` en fin de ligne
+  pour une manche en Vrai / Faux ; un clic ou « Manche suivante » lance une
+  manche neuve (votes remis à zéro, question et mode poussés partout).
+
+Une seule régie active à la fois : deux régies ouvertes sur des codes différents
+feraient basculer la page vMix de l'une à l'autre.
+
+La table `pc_votes` refuse la clé publique (`permission denied`) : la
+persistance des votes et de la question en base ne fonctionne pas, seul le temps
+réel porte le jeu.
+
 ## Enregistrement pour le montage
 
 Une case « Enregistrer le MP4 », décochée par défaut, est posée à côté du bouton
