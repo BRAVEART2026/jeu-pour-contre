@@ -30,6 +30,10 @@ relié à Internet), jamais dans l'entrée navigateur de vMix :
   pour une manche en Pour / Contre (Vrai / Faux par défaut) ; un clic ou « Manche suivante » lance une
   manche neuve (votes remis à zéro, question et mode poussés partout).
 
+- « Lien pour un 2e poste » : `?reprise=<code>` ouvre la régie sur un autre
+  poste dans la même session ; elle récupère conducteur, question, mode et
+  votes, et la première régie se met en retrait (bandeau, plus de heartbeat).
+
 Une seule régie active à la fois : deux régies ouvertes sur des codes différents
 feraient basculer la page vMix de l'une à l'autre.
 
